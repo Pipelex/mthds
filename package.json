@@ -1,6 +1,6 @@
 {
   "name": "mthds",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "CLI for composable methods for AI agents. Turn your knowledge processes into executable methods.",
   "license": "MIT",
   "type": "module",

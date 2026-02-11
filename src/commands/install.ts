@@ -1,7 +1,12 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { mkdirSync } from "node:fs";
+import { exec } from "node:child_process";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
 import * as p from "@clack/prompts";
+import chalk from "chalk";
 import { isPipelexInstalled } from "../runtime/check.js";
 import { ensureRuntime } from "../runtime/installer.js";
 import { trackMethodInstall, shutdown } from "../telemetry/posthog.js";
@@ -82,18 +87,18 @@ export async function installMethod(slug: string): Promise<void> {
     process.exit(0);
   }
 
-  // Step 3: Optional software install
-  const wantsSoftware = await p.confirm({
-    message: "Do you want to install software now? (optional)",
+  // Step 3: Optional runner install
+  const wantsRunner = await p.confirm({
+    message: "Do you want to install the runner now? (optional)",
     initialValue: false,
   });
 
-  if (p.isCancel(wantsSoftware)) {
+  if (p.isCancel(wantsRunner)) {
     p.cancel("Installation cancelled.");
     process.exit(0);
   }
 
-  if (wantsSoftware) {
+  if (wantsRunner) {
     if (!isPipelexInstalled()) {
       await ensureRuntime();
       p.log.success("pipelex installed.");
@@ -119,6 +124,65 @@ export async function installMethod(slug: string): Promise<void> {
     location: selectedLocation,
     targetDir,
   });
+
+  // Step 5: Optional Pipelex skills
+  const SKILLS_REPO = "https://github.com/pipelex/skills";
+  const skillChoices = [
+    { value: "check", label: "check", hint: "Validate and review Pipelex workflow bundles without making changes" },
+    { value: "edit", label: "edit", hint: "Modify existing Pipelex workflow bundles" },
+    { value: "build", label: "build", hint: "Create new Pipelex workflow bundles from scratch" },
+    { value: "fix", label: "fix", hint: "Automatically fix issues in Pipelex workflow bundles" },
+  ];
+
+  let selectedSkills: string[] = [];
+  let emptyAttempts = 0;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const hint = emptyAttempts > 0
+      ? chalk.yellow("  press space to select, enter to confirm")
+      : chalk.dim("  press space to select, enter to confirm");
+
+    const result = await p.multiselect({
+      message: `Which Pipelex skills do you want to install?\n${hint}`,
+      options: skillChoices,
+      required: false,
+    });
+
+    if (p.isCancel(result)) {
+      p.cancel("Installation cancelled.");
+      process.exit(0);
+    }
+
+    if (result.length === 0) {
+      emptyAttempts++;
+      if (emptyAttempts >= 2) {
+        break;
+      }
+      continue;
+    }
+
+    selectedSkills = result;
+    break;
+  }
+
+  if (selectedSkills.length > 0) {
+    const globalFlag = selectedLocation === Loc.Global ? " -g" : "";
+    const locationLabel = selectedLocation === Loc.Global ? "globally" : "locally";
+    const sk = p.spinner();
+    for (const skill of selectedSkills) {
+      sk.start(`Installing skill "${skill}" ${locationLabel}...`);
+      try {
+        await execAsync(`npx skills add ${SKILLS_REPO} --skill ${skill} --agent ${selectedAgent}${globalFlag} -y`, {
+          cwd: process.cwd(),
+        });
+        sk.stop(`Skill "${skill}" installed ${locationLabel}.`);
+      } catch {
+        sk.stop(`Failed to install skill "${skill}".`);
+        p.log.warning(`Could not install skill "${skill}". You can retry manually:\n  npx skills add ${SKILLS_REPO} --skill ${skill} --agent ${selectedAgent}${globalFlag}`);
+      }
+    }
+  }
 
   p.outro("Done");
   await shutdown();

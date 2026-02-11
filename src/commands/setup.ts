@@ -4,13 +4,13 @@ import { ensureRuntime } from "../runtime/installer.js";
 import { shutdown } from "../telemetry/posthog.js";
 import { printLogo } from "./index.js";
 
-export async function installSoftware(name: string): Promise<void> {
+export async function installRunner(name: string): Promise<void> {
   printLogo();
   p.intro("mthds setup");
 
   if (name !== "pipelex") {
-    p.log.error(`Unknown software: ${name}`);
-    p.log.info("Available software: pipelex");
+    p.log.error(`Unknown runner: ${name}`);
+    p.log.info("Available runners: pipelex");
     p.outro("Done");
     process.exit(1);
   }

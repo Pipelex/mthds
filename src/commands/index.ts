@@ -41,7 +41,16 @@ export function showBanner(): void {
     `    ${chalk.yellow("install <slug>")}         Install a method`
   );
   console.log(
-    `    ${chalk.yellow("setup software <name>")} Install a software runtime`
+    `    ${chalk.yellow("setup runner <name>")}   Install a runner`
+  );
+  console.log(
+    `    ${chalk.yellow("config set <key> <val>")} Set a config value`
+  );
+  console.log(
+    `    ${chalk.yellow("config get <key>")}       Get a config value`
+  );
+  console.log(
+    `    ${chalk.yellow("config list")}             List all config values`
   );
   console.log(
     `    ${chalk.yellow("--help")}                  Show this help message`
@@ -52,7 +61,7 @@ export function showBanner(): void {
 
   console.log(chalk.bold("  Examples:"));
   console.log(`    ${chalk.dim("$")} mthds install my-method-slug`);
-  console.log(`    ${chalk.dim("$")} mthds setup software pipelex\n`);
+  console.log(`    ${chalk.dim("$")} mthds setup runner pipelex\n`);
 
   console.log(
     chalk.dim("  Docs: https://pipelex.dev/docs\n")

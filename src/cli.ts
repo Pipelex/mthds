@@ -4,8 +4,9 @@ import { createRequire } from "node:module";
 import * as p from "@clack/prompts";
 import { showBanner } from "./commands/index.js";
 import { printLogo } from "./commands/index.js";
-import { installSoftware } from "./commands/setup.js";
+import { installRunner } from "./commands/setup.js";
 import { installMethod } from "./commands/install.js";
+import { configSet, configGet, configList } from "./commands/config.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -32,15 +33,45 @@ program
     await installMethod(slug);
   });
 
-// mthds setup software <name>
+// mthds setup runner <name>
 const setup = program.command("setup").exitOverride();
 
 setup
-  .command("software <name>")
-  .description("Install a software runtime (e.g. pipelex)")
+  .command("runner <name>")
+  .description("Install a runner (e.g. pipelex)")
   .exitOverride()
   .action(async (name: string) => {
-    await installSoftware(name);
+    await installRunner(name);
+  });
+
+// mthds config set|get|list
+const config = program.command("config").description("Manage configuration").exitOverride();
+
+config
+  .command("set")
+  .argument("<key>", "Config key (runner, api-url, api-key)")
+  .argument("<value>", "Value to set")
+  .description("Set a config value")
+  .exitOverride()
+  .action(async (key: string, value: string) => {
+    await configSet(key, value);
+  });
+
+config
+  .command("get")
+  .argument("<key>", "Config key (runner, api-url, api-key)")
+  .description("Get a config value")
+  .exitOverride()
+  .action(async (key: string) => {
+    await configGet(key);
+  });
+
+config
+  .command("list")
+  .description("List all config values")
+  .exitOverride()
+  .action(async () => {
+    await configList();
   });
 
 // Default: show banner

@@ -36,32 +36,57 @@ export function showBanner(): void {
   console.log(chalk.bold("  Usage:"));
   console.log(`    ${chalk.green("mthds")} ${chalk.yellow("<command>")} [options]\n`);
 
-  console.log(chalk.bold("  Commands:"));
+  console.log(chalk.bold("  Pipeline:"));
   console.log(
-    `    ${chalk.yellow("install <slug>")}         Install a method`
+    `    ${chalk.yellow("run <target>")}              Execute a pipeline`
   );
   console.log(
-    `    ${chalk.yellow("setup runner <name>")}   Install a runner`
+    `    ${chalk.yellow("build pipe <brief>")}        Build a pipeline from a prompt`
   );
   console.log(
-    `    ${chalk.yellow("config set <key> <val>")} Set a config value`
+    `    ${chalk.yellow("build runner <bundle>")}     Generate Python runner code`
   );
   console.log(
-    `    ${chalk.yellow("config get <key>")}       Get a config value`
+    `    ${chalk.yellow("build inputs <bundle>")}     Generate example input JSON`
   );
   console.log(
-    `    ${chalk.yellow("config list")}             List all config values`
+    `    ${chalk.yellow("build output <bundle>")}     Generate output schema`
   );
   console.log(
-    `    ${chalk.yellow("--help")}                  Show this help message`
+    `    ${chalk.yellow("validate <target>")}         Validate PLX content\n`
+  );
+
+  console.log(chalk.bold("  Runners:"));
+  console.log(
+    `    ${chalk.yellow("setup runner <name>")}       Install a runner`
   );
   console.log(
-    `    ${chalk.yellow("--version")}               Show version\n`
+    `    ${chalk.yellow("runner set-default <name>")} Set the default runner`
+  );
+  console.log(
+    `    ${chalk.yellow("runner list")}                List available runners\n`
+  );
+
+  console.log(chalk.bold("  Setup:"));
+  console.log(
+    `    ${chalk.yellow("install <slug>")}            Install a method`
+  );
+  console.log(
+    `    ${chalk.yellow("config set <key> <val>")}    Set a config value`
+  );
+  console.log(
+    `    ${chalk.yellow("config get <key>")}          Get a config value`
+  );
+  console.log(
+    `    ${chalk.yellow("config list")}                List all config values\n`
   );
 
   console.log(chalk.bold("  Examples:"));
-  console.log(`    ${chalk.dim("$")} mthds install my-method-slug`);
-  console.log(`    ${chalk.dim("$")} mthds setup runner pipelex\n`);
+  console.log(`    ${chalk.dim("$")} mthds run hello_world`);
+  console.log(`    ${chalk.dim("$")} mthds run my_bundle.plx --inputs data.json`);
+  console.log(`    ${chalk.dim("$")} mthds build pipe "Analyze a CV against a job offer"`);
+  console.log(`    ${chalk.dim("$")} mthds validate my_bundle.plx`);
+  console.log(`    ${chalk.dim("$")} mthds install my-method-slug\n`);
 
   console.log(
     chalk.dim("  Docs: https://pipelex.dev/docs\n")

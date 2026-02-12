@@ -11,7 +11,6 @@ function isDisabled(): boolean {
 
 function getClient(): PostHog | null {
   if (isDisabled()) return null;
-  console.log("PostHog API Key:", POSTHOG_API_KEY);
   if (!client) {
     client = new PostHog(POSTHOG_API_KEY, { host: POSTHOG_HOST, disableGeoip: true });
   }

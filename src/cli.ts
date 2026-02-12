@@ -7,6 +7,21 @@ import { printLogo } from "./commands/index.js";
 import { installRunner } from "./commands/setup.js";
 import { installMethod } from "./commands/install.js";
 import { configSet, configGet, configList } from "./commands/config.js";
+import { runPipeline } from "./commands/run.js";
+import {
+  buildPipe,
+  buildRunner,
+  buildInputs,
+  buildOutput,
+} from "./commands/build.js";
+import { validatePlx } from "./commands/validate.js";
+import { runnerSetDefault, runnerList } from "./commands/runner.js";
+import type { RunnerType } from "./runners/types.js";
+import type { Command as Cmd } from "commander";
+
+function getRunner(cmd: Cmd): RunnerType | undefined {
+  return cmd.optsWithGlobals().runner as RunnerType | undefined;
+}
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -17,13 +32,89 @@ program
   .name("mthds")
   .version(pkg.version)
   .description("CLI bridge to the Pipelex runtime")
+  .option("--runner <type>", "Runner to use (api, pipelex)")
   .exitOverride()
   .configureOutput({
     writeOut: () => {},
     writeErr: () => {},
   });
 
-// mthds install <slug>
+// ── mthds run <target> ─────────────────────────────────────────────
+program
+  .command("run")
+  .argument("<target>", "Pipe code or .plx bundle file")
+  .option("--pipe <code>", "Pipe code (when target is a bundle)")
+  .option("-i, --inputs <file>", "Path to JSON inputs file")
+  .option("-o, --output <file>", "Path to save output JSON")
+  .option("--no-output", "Skip saving output to file")
+  .option("--no-pretty-print", "Skip pretty printing the output")
+  .description("Execute a pipeline")
+  .exitOverride()
+  .action(async (target: string, options: Record<string, string | boolean | undefined>, cmd: Cmd) => {
+    await runPipeline(target, { ...options, runner: getRunner(cmd) } as Parameters<typeof runPipeline>[1]);
+  });
+
+// ── mthds build <subcommand> ────────────────────────────────────────
+const build = program
+  .command("build")
+  .description("Generate pipelines, runner code, inputs, and output schemas")
+  .exitOverride();
+
+build
+  .command("pipe")
+  .argument("<brief>", "Natural-language description of the pipeline")
+  .option("-o, --output <file>", "Path to save the generated .plx file")
+  .description("Build a pipeline from a prompt")
+  .exitOverride()
+  .action(async (brief: string, options: { output?: string }, cmd: Cmd) => {
+    await buildPipe(brief, { ...options, runner: getRunner(cmd) });
+  });
+
+build
+  .command("runner")
+  .argument("<target>", ".plx bundle file")
+  .option("--pipe <code>", "Pipe code to generate runner for")
+  .option("-o, --output <file>", "Path to save the generated Python file")
+  .description("Generate Python runner code for a pipe")
+  .exitOverride()
+  .action(async (target: string, options: { pipe?: string; output?: string }, cmd: Cmd) => {
+    await buildRunner(target, { ...options, runner: getRunner(cmd) });
+  });
+
+build
+  .command("inputs")
+  .argument("<target>", ".plx bundle file")
+  .requiredOption("--pipe <code>", "Pipe code to generate inputs for")
+  .description("Generate example input JSON for a pipe")
+  .exitOverride()
+  .action(async (target: string, options: { pipe: string }, cmd: Cmd) => {
+    await buildInputs(target, { ...options, runner: getRunner(cmd) });
+  });
+
+build
+  .command("output")
+  .argument("<target>", ".plx bundle file")
+  .requiredOption("--pipe <code>", "Pipe code to generate output for")
+  .option("--format <format>", "Output format (json, python, schema)", "schema")
+  .description("Generate output representation for a pipe")
+  .exitOverride()
+  .action(async (target: string, options: { pipe: string; format?: string }, cmd: Cmd) => {
+    await buildOutput(target, { ...options, runner: getRunner(cmd) });
+  });
+
+// ── mthds validate <target> ────────────────────────────────────────
+program
+  .command("validate")
+  .argument("<target>", ".plx bundle file or pipe code")
+  .option("--pipe <code>", "Pipe code that must exist in the bundle")
+  .option("--bundle <file>", "Bundle file path (alternative to positional)")
+  .description("Validate PLX content")
+  .exitOverride()
+  .action(async (target: string, options: { pipe?: string; bundle?: string }, cmd: Cmd) => {
+    await validatePlx(target, { ...options, runner: getRunner(cmd) });
+  });
+
+// ── mthds install <slug> ───────────────────────────────────────────
 program
   .command("install")
   .argument("<slug>", "Method slug to install")
@@ -33,7 +124,7 @@ program
     await installMethod(slug);
   });
 
-// mthds setup runner <name>
+// ── mthds setup runner <name> ──────────────────────────────────────
 const setup = program.command("setup").exitOverride();
 
 setup
@@ -44,7 +135,30 @@ setup
     await installRunner(name);
   });
 
-// mthds config set|get|list
+// ── mthds runner set-default|list ───────────────────────────────────
+const runnerCmd = program
+  .command("runner")
+  .description("Manage runners")
+  .exitOverride();
+
+runnerCmd
+  .command("set-default")
+  .argument("<name>", "Runner name (api, pipelex)")
+  .description("Set the default runner")
+  .exitOverride()
+  .action(async (name: string) => {
+    await runnerSetDefault(name);
+  });
+
+runnerCmd
+  .command("list")
+  .description("List available runners")
+  .exitOverride()
+  .action(async () => {
+    await runnerList();
+  });
+
+// ── mthds config set|get|list ──────────────────────────────────────
 const config = program.command("config").description("Manage configuration").exitOverride();
 
 config
@@ -96,7 +210,12 @@ program.parseAsync(process.argv).catch((err: unknown) => {
     p.log.error(message);
 
     if (err.code === "commander.missingArgument") {
-      p.log.info("Run mthds --help to see usage.");
+      const args = process.argv.slice(2);
+      if (args.includes("runner") && args.includes("set-default")) {
+        p.log.info("Run mthds runner list to see available runners.");
+      } else {
+        p.log.info("Run mthds --help to see usage.");
+      }
     }
 
     p.outro("");
